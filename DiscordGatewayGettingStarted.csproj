@@ -5,4 +5,9 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.json" Version="10.0.3" />
+    <PackageReference Include="Websocket4net" Version="0.15.1" />
+  </ItemGroup>
+
 </Project>
