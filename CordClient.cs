@@ -15,15 +15,25 @@ namespace Discord
 
         public WebSocket Socket { get; private set; }
         public CordRestClient Client { get; private set; }
+        public string Token { get; set; }
 
-        public async void Login(string token)
+        public void Login(string token, bool bot)
         {
+            Token = bot ? "" : "Bot " + token;
+            Client = new CordRestClient(token, false);
 
+            string gateway_url = await Client.GetGatewayUrl();
+
+            return;
         }
 
-        public async void Login(string username, string password)
+        public async void Login(string email, string password)
         {
+            string token = await CordRestClient.GetToken(email, password);
             
+            Login(token, false);
+
+            return;
         }
     }
 }

@@ -10,9 +10,11 @@ namespace Discord.Rest
 {
     public class CordRestClient
     {
-        public CordRestClient(string token, string HostURL = "discordapp.com", string ApiVersion = "7", string baseApiUrl = "/api")
+        public CordRestClient(string token, bool bot, string HostURL = "discordapp.com", string ApiVersion = "7", string baseApiUrl = "/api")
         {
-            this.Token = token;
+            this.Token = bot ? "" : "Bot " + token;
+            Client = new HttpClient();
+            Client.DefaultRequestHeaders.Add("Authorization", this.Token);
         }
 
         public string Token { get; private set; }
@@ -22,9 +24,14 @@ namespace Discord.Rest
         public string Endpoint { get { return $"https://{HostURL}{BaseApiURL}/v{ApiVersion}"; } }
         public static string DefaultEndpoint = "https://discordapp.com/api/v7";
         public static Encoding Encoding = Encoding.UTF8;
+        
+        public HttpClient Client { get; private set; }
+
+        //An FYI: We're not really making sure this is a 
         public async Task<bool> SendMessage(string channel_id, string content)
         {
-
+            string base_url = Endpoint + $"/channels/{channel_id}/messages";
+            
         }
 
         public static async Task<string> GetToken(string email, string password)
@@ -36,7 +43,7 @@ namespace Discord.Rest
 
                 while (!request_success)
                 {
-                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, DefaultEndpoint + "/auth/login");
+                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, DefaultEndpoint + "/auth/login");
                     string content = JsonConvert.SerializeObject(new { email = email, password = password });
                     request.Content = new StringContent(content, Encoding, "application/json");
 
@@ -67,7 +74,18 @@ namespace Discord.Rest
                 }
                 
                 return resp_token;
+            }
+        }
 
+        public async Task<string> GetGatewayUrl()
+        {
+            using(var request = new HttpRequestMessage(HttpMethod.Get, Endpoint + "/gateway"))
+            {
+                string response = await (await Client.SendAsync(request)).Content.ReadAsStringAsync();
+
+                var model = JsonConvert.DeserializeObject<GatewayUrlModel>(response);
+
+                return model.Url + $"?v={ApiVersion}&encoding=json";
             }
         }
 
