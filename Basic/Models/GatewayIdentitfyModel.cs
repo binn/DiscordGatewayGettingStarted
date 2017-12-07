@@ -3,6 +3,18 @@ using J = Newtonsoft.Json.JsonPropertyAttribute;
 
 namespace MyApp.Models
 {
+    public class GatewaySendModel
+    {
+        [J("op")]
+        public int Opcode { get; set; }
+        [J("d")]
+        public GatewayIdentifyModel Data { get; set; }
+
+        public static GatewaySendModel GetData(GatewayIdentifyModel model)
+        {
+            return new GatewaySendModel(){ Opcode = 2, Data = model };
+        }
+    }
     public class GatewayIdentifyModel
     {
         [J("properties")]

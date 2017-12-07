@@ -5,6 +5,8 @@ using SuperSocket.ClientEngine;
 using WebSocket4Net;
 using MyApp.Models;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace MyApp
 {
@@ -18,7 +20,7 @@ namespace MyApp
         string intial_status = "dnd"; //status, examples: online | dnd | offline | invisible | idle 
         string intital_status_game = "Hello from .NET!"; // the game you want.
 
-        int seq = 0; //ignore this as it's for heartbeat
+        int? seq = null; //ignore this as it's for heartbeat
 
         static void Main(string[] args)
         {
@@ -41,7 +43,7 @@ namespace MyApp
         private void socket_Opened(object sender, EventArgs e)
         {
             Console.WriteLine("[SOCKET] Connected to gateway!");
-            socket.Send(JsonConvert.SerializeObject(
+            socket.Send(JsonConvert.SerializeObject(GatewaySendModel.GetData(
                 new GatewayIdentifyModel()
                 {
                     Token = token,
@@ -65,14 +67,47 @@ namespace MyApp
                         }
                     }
                 }
-            ));
+            )));
             Console.WriteLine("[SOCKET] Sent initial heartbeat data!");
             //send the intital heartbeat data
         }
 
-        private void socket_MessageReceived(object sender, MessageReceivedEventArgs e)
+        private async void socket_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Console.WriteLine(e.Message);
+            var data = JsonConvert.DeserializeObject<GatewayModel>(e.Message);
+            seq = data.Sequence;
+
+            if (data.Opcode == 10)
+            {
+                var hello = (data.Data as JToken).ToObject<GatewayHello>();
+                Console.WriteLine("[GATEWAY] Recieved Hello with Heartbeat interval at " + hello.HeartbeatInterval + " and trace:\n" + hello.GetTraceString());
+                await heartbeat(hello.HeartbeatInterval);
+            }
+            if (data.Opcode == 0)
+            {
+                if (data.EventName == "MESSAGE_CREATE")
+                {
+                    var msg = (data.Data as JToken).ToObject<MessageObject>();
+
+                    if (msg.Type == 0)
+                    {
+                        if (msg.Content == "o!ping")
+                        {
+                            using (var client = new HttpClient())
+                            {
+                                client.DefaultRequestHeaders.Add("Authorization", token);
+                                using (var r = new HttpRequestMessage(HttpMethod.Post, "https://discordapp.com/api/v6/channels/" + msg.ChannelId + "/messages"))
+                                {
+                                    r.Content = new StringContent(JsonConvert.SerializeObject(new { content = "and a ping pong to you too, <@" + msg.Author.Id + ">" }), Encoding.UTF8, "application/json");
+                                    await client.SendAsync(r);
+                                }
+                            }
+
+                            Console.WriteLine("Someone pinged!");
+                        }
+                    }
+                }
+            }
         }
 
         private void socket_Closed(object sender, EventArgs e)
@@ -92,13 +127,9 @@ namespace MyApp
         {
             while (true)
             {
-                await Task.Delay(wait_time);
+                await Task.Delay(wait_time - 1);
 
-                int? send_data = 0;
-                if (seq == 0) send_data = null;
-                else send_data = seq;
-
-                socket.Send(JsonConvert.SerializeObject(new { op = 1, d = send_data }));
+                socket.Send(JsonConvert.SerializeObject(new { op = 1, d = seq }));
             }
 
         }
