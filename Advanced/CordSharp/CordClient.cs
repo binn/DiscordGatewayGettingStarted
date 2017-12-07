@@ -17,10 +17,10 @@ namespace Discord
         public CordRestClient Client { get; private set; }
         public string Token { get; set; }
 
-        public void Login(string token, bool bot)
+        public async void Login(string token, bool bot)
         {
-            Token = bot ? "" : "Bot " + token;
-            Client = new CordRestClient(token, false);
+            Token = (bot ? "" : "Bot ") + token;
+            Client = new CordRestClient(token, bot);
 
             string gateway_url = await Client.GetGatewayUrl();
 

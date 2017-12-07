@@ -12,7 +12,7 @@ namespace Discord.Rest
     {
         public CordRestClient(string token, bool bot, string HostURL = "discordapp.com", string ApiVersion = "7", string baseApiUrl = "/api")
         {
-            this.Token = bot ? "" : "Bot " + token;
+            this.Token = (bot ? "" : "Bot ") + token;
             Client = new HttpClient();
             Client.DefaultRequestHeaders.Add("Authorization", this.Token);
         }
